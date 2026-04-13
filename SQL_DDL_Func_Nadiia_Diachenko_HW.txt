@@ -1,0 +1,48 @@
+--Task 6. Analyze the existing functions in the dvd_rental database and prepare answers to the following questions
+
+/*1.What operations do the following functions perform: film_in_stock, film_not_in_stock, inventory_in_stock, get_customer_balance, inventory_held_by_customer, rewards_report, last_day? You can find these functions in dvd_rental database.*/
+
+--film_in_stock -The function returns a list of available inventory items for a specific film at the specified store.
+
+--film_not_in_stock -The function returns a list of inventory items for a specific film that are currently rented out at the specified store
+
+--inventory_in_stock - The function checks whether the film copy (specific inventory) is available for rent: firstly, it checks if there are any records in the rental table at all; then, if yes, it checks whether there are active rentals (without a return date), and finally returns a boolean result based on the conditions above.
+
+--get_customer_balance - The function calculates the customer’s total balance based on the main components: it sums all rentals up to the specified date, charges $1 per day for overdue rentals, and sums all customer payments to determine whether the customer has overpaid or has outstanding fees.
+
+--inventory_held_by_customer - The function returns the customer who currently holds a specific inventory item based on empty return date
+
+--rewards_report - The function returns customers that have specific purchase counts and spending thresholds during a specific period. 
+
+--last_day - The function calculates the last day of the month of a specific day(parameter) based on the first day of the following month and subtracting one day.
+
+/*2. Why does ‘rewards_report’ function return 0 rows? Correct and recreate the function, so that it's able to return rows properly.
+The issue is caused by a date mismatch. The latest transactions in the dvdrental are from 2017, so we can add check for these dates. Also, we can populate the tables with recent data and run the function after*/
+
+/*3.Is there any function that can potentially be removed from the dvd_rental codebase (inefficient? redundant)? If so, which one and why?
+It may be reasonable to implement a more robust approach for checking in-stock and out-of-stock logic, as the functions are similar, and to remove the dependency of one function on another (e.g., film_in_stock depending on inventory_in_stock).*/
+
+/*4. Which functions violate best practices?
+ * film_in_stock та film_not_in_stock are repeatable and rely on inventory_in_stock function that creates a dependency
+ * rewards_report uses dynamic temporary tables, it can be replaced with CTE
+ * last_day may be replaced with built-in date_trunc usage + intervals
+ */
+
+/*5. The ‘get_customer_balance’ function describes the business requirements for calculating the client balance. Unfortunately, not all of them are implemented in this function. Try to change function using the requirements from the comments.
+ * Missing requirement:
+   --#   3) IF A FILM IS MORE THAN RENTAL_DURATION * 2 OVERDUE, CHARGE THE REPLACEMENT_COST*/
+
+/*6. How do ‘group_concat’ and ‘_group_concat’ functions work? (database creation script might help) Where are they used?
+ * _group_concat concatenates strings skipping NULL values - works with 2 values
+ * group_concat aggregates the row values and merges them into one skipping NULL values - works with multiple rows*/
+
+/*7.What does ‘last_updated’ function do? Where is it used?
+ * The function automatically sets the last_update column to the current date on each row interaction*/
+
+/*8. What is tmpSQL variable for in ‘rewards_report’ function? Can this function be recreated without EXECUTE statement and dynamic SQL? Why?
+ * tmpSQL is a varable to store the results of the temporary table dynamic query. This is not best practice and needs to be avoided. The CTE can replace insert operation without creating physical temporary table and dropping it further */
+
+/*9. Can any function produce incorrect results? Why?
+ * rewards_report returns zero due to old last records(2017) as discussed before
+ * film_in_stock depending on inventory_in_stock - inventory_in_stock changes may affect dependant tables
+ */
