@@ -1,0 +1,117 @@
+Task 1. Figure out what security precautions are already used in your 'dvd_rental' database.  Prepare description
+
+
+*************EXISTING ROLES*************
+
+SELECT * FROM pg_roles;
+Output:
+
+--------------------------------------------------------------------------------------------------
+ROLNAME               | SUPER | INHERIT | CREATEROLE | CREATEDB | CANLOGIN | REPL | CONNLIMIT
+--------------------------------------------------------------------------------------------------
+pg_database_owner     | [ ]   | [v]     | [ ]        | [ ]      | [ ]      | [ ]  | -1
+pg_read_all_data      | [ ]   | [v]     | [ ]        | [ ]      | [ ]      | [ ]  | -1
+pg_write_all_data     | [ ]   | [v]     | [ ]        | [ ]      | [ ]      | [ ]  | -1
+pg_monitor            | [ ]   | [v]     | [ ]        | [ ]      | [ ]      | [ ]  | -1
+...  'pg_read_all_settings', 'pg_read_all_stats', 
+        'pg_stat_scan_tables', 'pg_read_server_files', 'pg_write_server_files', 
+        'pg_execute_server_program', 'pg_signal_backend', 'pg_checkpoint', 
+        'pg_maintain', 'pg_use_reserved_connections', 'pg_create_subscription', 
+        'pg_signal_autovacuum_worker' ...
+postgres              | [v]   | [v]     | [v]        | [v]      | [v]      | [v]  | -1
+--------------------------------------------------------------------------------------------------
+Note: [v] = Enabled/True | [ ] = Disabled/False | -1 = No Connection Limit
+
+*************EXISTING USERS*************
+
+SELECT * FROM pg_user;
+Output:
+
+-------------------------------------------------------------------------------------------
+USERNAME | SYSID | CREATEDB | SUPERUSER | REPLICATION | BYPASSRLS | PASSWORD | VALUNTIL
+-------------------------------------------------------------------------------------------
+postgres | 10    | [v]      | [v]       | [v]         | [v]       | ******** | [NULL]
+-------------------------------------------------------------------------------------------
+
+*************TABLE-LEVEL PERMISSIONS*************
+
+SELECT grantee, table_name, privilege_type
+FROM information_schema.table_privileges 
+WHERE table_schema = 'public' 
+AND grantee IN (
+        'pg_database_owner', 'pg_read_all_data', 'pg_write_all_data', 
+        'pg_monitor', 'pg_read_all_settings', 'pg_read_all_stats', 
+        'pg_stat_scan_tables', 'pg_read_server_files', 'pg_write_server_files', 
+        'pg_execute_server_program', 'pg_signal_backend', 'pg_checkpoint', 
+        'pg_maintain', 'pg_use_reserved_connections', 'pg_create_subscription', 
+        'pg_signal_autovacuum_worker', 'postgres')
+        
+        
+        
+Output:
+Output table shows that only postgres role has privileges on all tables: INSERT, SELECT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER
+
+-----------------------------------------------------------------
+ROW | GRANTEE  | TABLE_NAME | PRIVILEGE_TYPE
+-----------------------------------------------------------------
+1   | postgres | film_actor | INSERT
+2   | postgres | film_actor | SELECT
+3   | postgres | film_actor | UPDATE
+4   | postgres | film_actor | DELETE
+5   | postgres | film_actor | TRUNCATE
+6   | postgres | film_actor | REFERENCES
+7   | postgres | film_actor | TRIGGER
+8   | postgres | address    | INSERT
+... |   ....   |   ...      |   ...
+-----------------------------------------------------------------
+
+*************ROW-LEVEL SECURITY*************  
+
+SELECT * FROM pg_policies;
+Output:
+Command did not return the result - no policies are defined
+
+*************DATABASE-LEVEL SETTINGS: CONNECTION*************
+
+SELECT datname, datconnlimit 
+FROM pg_database 
+WHERE datname = 'dvdrental';
+
+Output:-1 -means that no specific database
+
+-----------------------------------------
+DATNAME      | DATCONNLIMIT
+-----------------------------------------
+dvdrental    | -1
+-----------------------------------------
+Global connection limit is inherited:
+
+SHOW max_connections 
+-----------------------------------------
+max_connections  | 100
+-----------------------------------------
+
+*************DATABASE-LEVEL SETTINGS: AUTHENTIFICATION METHODS*************
+
+SELECT * FROM pg_hba_file_rules;
+
+Output:
+---------------------------------------------------------------------------------------------------------
+LINE | TYPE  | DATABASE    | USERNAME | ADDRESS       | NETMASK           | METHOD        | OPTIONS
+---------------------------------------------------------------------------------------------------------
+113  | local | all         | all      | [NULL]        | [NULL]            | trust         | NULL
+115  | host  | all         | all      | 127.0.0.1     | 255.255.255.255   | trust         | NULL
+117  | host  | all         | all      | ::1           | ffff:ffff...:ffff | trust         | NULL
+120  | local | replication | all      | [NULL]        | [NULL]            | scram-sha-256 | NULL
+121  | host  | replication | all      | 127.0.0.1     | 255.255.255.255   | scram-sha-256 | NULL
+122  | host  | replication | all      | ::1           | ffff:ffff...:ffff | scram-sha-256 | NULL
+---------------------------------------------------------------------------------------------------------
+
+The results show that 2 methods are used: trust and scram-sha-256(password-based)
+
+Trust method is the most insecure method - no authentication at all - it is the vulnerable place of the database security.
+It may be replaced with scram-sha-256 method(password required):
+
+ALTER USER postgres WITH PASSWORD '123';
+
+
