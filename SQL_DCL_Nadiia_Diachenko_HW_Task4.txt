@@ -1,0 +1,51 @@
+Task 4. Prepare answers to the following questions
+
+I. How can one restrict access to certain columns of a database table?
+
+1. Set Column level permissions to grant or deny access to specific columns to users:
+
+CREATE ROLE column_access_actor WITH PASSWORD 'QIWIWI122'
+GRANT SELECT actor_id ON TABLE public.actor TO column_access_actor;
+
+Testing results show that SELECT * FROM public.actor will lead to a restriction error; the target columns should be mentioned in the user query:
+SELECT actor_id FROM public.actor
+
+2. Use views with limited access to the required users
+
+CREATE VIEW allowed_rentals as SELECT rental_id, rental_date FROM public.rental;
+GRANT SELECT ON allowed_rentals to column_access_user;
+
+3. Column-level encryption to encrypt just the column data, so the user can access the column but can not see the actual data. PostgreSQL has a pgcrypto module for this purpose.
+
+Column-Level Security allows hiding sensitive data and displaying only necessary information for a specific position. For example, an analyst can view a customer's purchase history, but do not see credit card numbers or home addresses. Healthcare researchers see only the patient blood pressure column without personal names.
+
+II. What is the difference between user identification and user authentication?
+
+Identification is the ability to uniquely identify a user of a system or an application. Authentication is the ability to prove that a user or application is genuinely who that person or what that application claims to be.
+
+The query SELECT * FROM pg_roles WHERE rolname = 'client_mary_smith'; will identify that such a user exist
+The authentication happens when client_mary_smith logs into the database using her password
+
+III. What are the recommended authentication protocols for PostgreSQL?
+
+Password-based authentication (for example, SCRAM-SHA-256) - the current gold standard.
+GSSAPI: provides automatic authentication (single sign-on) for systems that support it
+SSPI is a Windows technology for secure authentication with single sign-on
+Certificate authentication requires an SSL connection and authenticates users by checking the SSL certificate they send - for high security operations
+Peer authentication, which relies on operating system facilities to identify the process at the other end of a local connection. This is not supported for remote connections.
+Others: LDAP, RADIUS, ident, PAM, BSD, OAuth, trust
+
+IV. What is proxy authentication in PostgreSQL and what is it for? Why does it make the previously discussed role-based access control easier to implement?
+
+Proxy authentication allows one user to connect and then act on behalf of another user.
+
+For example, we have a user from the questions above with limited access to the actors table (column_access_actor)
+
+GRANT column_access_actor TO client_mary_smith 
+
+SET ROLE client_mary_smith
+
+SELECT actor_id FROM public.actor
+output: the actors ids table
+
+The client_mary_smith accesses the actor table without separately assigned privileges. It is especially suitable for multiple users and role privileges. 
