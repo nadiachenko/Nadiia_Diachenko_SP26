@@ -69,12 +69,15 @@ class InvertedIndex:
 
 
 def load_documents(filepath: str) -> Dict[int, str]:
-    """
-    Allow us to upload documents from either tempopary directory or local storage
-    :param filepath: path to file with documents
-    :return: Dict[int, str]
-    """
-    pass
+    documents = {}
+
+    with open(filepath, 'r', encoding='utf-8') as f:
+        for line in f:
+            doc_id, content = line.lower().split("\t", 1)
+            doc_id = int(doc_id)
+            documents[doc_id] = content.strip()
+
+    return documents
 
 
 def build_inverted_index(documents: Dict[int, str]) -> InvertedIndex:
