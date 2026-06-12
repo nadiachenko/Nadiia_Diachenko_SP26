@@ -3,6 +3,9 @@ Module for preparing inverted indexes based on uploaded documents
 """
 
 import sys
+import re
+import json
+from collections import defaultdict
 from argparse import ArgumentParser, ArgumentTypeError, FileType
 from io import TextIOWrapper
 from typing import Dict, List
@@ -44,19 +47,15 @@ class InvertedIndex:
     """
 
     def __init__(self, words_ids: Dict[str, List[int]]):
-        pass
+        self.words_ids = words_ids
 
     def query(self, words: List[str]) -> List[int]:
         """Return the list of relevant documents for the given query"""
         pass
 
     def dump(self, filepath: str) -> None:
-        """
-        Allow us to write inverted indexes documents to temporary directory or local storage
-        :param filepath: path to file with documents
-        :return: None
-        """
-        pass
+        with open(filepath, "w", encoding="utf-8") as file_obj:
+            json.dump(self.words_ids, file_obj)
 
     @classmethod
     def load(cls, filepath: str):
@@ -69,21 +68,27 @@ class InvertedIndex:
 
 
 def load_documents(filepath: str) -> Dict[int, str]:
-    """
-    Allow us to upload documents from either tempopary directory or local storage
-    :param filepath: path to file with documents
-    :return: Dict[int, str]
-    """
-    pass
+    documents = {}
+    with open(filepath, "r", encoding="utf-8") as file_obj:
+        for line in file_obj:
+            line = line.strip("\n")
+            if not line:
+                continue
+            doc_id, content = line.lower().split("\t", 1)
+            doc_id = int(doc_id)
+            documents[doc_id] = content
+    return documents
 
 
 def build_inverted_index(documents: Dict[int, str]) -> InvertedIndex:
-    """
-    Builder of inverted indexes based on documents
-    :param documents: dict with documents
-    :return: InvertedIndex class
-    """
-    pass
+    words_ids = defaultdict(set)
+    for doc_id, content in documents.items():
+        words = re.split(r"\W+", content)
+        for word in words:
+            if word:
+                words_ids[word].add(doc_id)
+    words_ids_lists = {word: sorted(ids) for word, ids in words_ids.items()}
+    return InvertedIndex(words_ids_lists)
 
 
 def callback_build(arguments) -> None:
