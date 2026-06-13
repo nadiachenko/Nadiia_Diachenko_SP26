@@ -50,8 +50,17 @@ class InvertedIndex:
         self.words_ids = words_ids
 
     def query(self, words: List[str]) -> List[int]:
-        """Return the list of relevant documents for the given query"""
-        pass
+        if not words:
+            return []
+        result_set = None
+        for word in words:
+            doc_ids = set(self.words_ids.get(word.lower(), []))
+            if result_set is None:
+                result_set = doc_ids
+            else:
+                result_set &= doc_ids
+
+        return sorted(result_set) if result_set else []
 
     def dump(self, filepath: str) -> None:
         with open(filepath, "w", encoding="utf-8") as file_obj:
@@ -59,12 +68,10 @@ class InvertedIndex:
 
     @classmethod
     def load(cls, filepath: str):
-        """
-        Allow us to upload inverted indexes from either temporary directory or local storage
-        :param filepath: path to file with documents
-        :return: InvertedIndex
-        """
-        pass
+        
+        with open(filepath, "r", encoding="utf-8") as file_obj:
+            words_ids = json.load(file_obj)
+        return cls(words_ids)
 
 
 def load_documents(filepath: str) -> Dict[int, str]:
