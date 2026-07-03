@@ -1,4 +1,3 @@
-
 -- CE_CATEGORIES: International
 BEGIN;
 INSERT INTO bl_3nf.ce_categories (product_category_id, product_category_name, source_system, source_entity, product_category_name_src_id, insert_dt, update_dt)
@@ -49,13 +48,12 @@ WHERE NOT EXISTS (
 );
 COMMIT;
 
--- CE_COUNTRIES: International
+-- CE_COUNTRIES: International (Fixed: Removed state_id mapping)
 BEGIN;
-INSERT INTO bl_3nf.ce_countries (country_id, country_name, state_id, source_system, source_entity, country_name_src_id, insert_dt, update_dt)
+INSERT INTO bl_3nf.ce_countries (country_id, country_name, source_system, source_entity, country_name_src_id, insert_dt, update_dt)
 SELECT 
     nextval('bl_3nf.seq_countries_id'),
     src.country_name,
-    -1,
     'SA_INT_SALES',
     'SRC_INT_SALES',
     src.country_src_id,
@@ -75,14 +73,12 @@ WHERE NOT EXISTS (
 );
 COMMIT;
 
--- CE_COUNTRIES: United States
---US sourse does not contain country column - adding the US value only
+-- CE_COUNTRIES: United States (Fixed: Removed state_id mapping)
 BEGIN;
-INSERT INTO bl_3nf.ce_countries (country_id, country_name, state_id, source_system, source_entity, country_name_src_id, insert_dt, update_dt)
+INSERT INTO bl_3nf.ce_countries (country_id, country_name, source_system, source_entity, country_name_src_id, insert_dt, update_dt)
 SELECT 
     nextval('bl_3nf.seq_countries_id'),
     'US',
-    -1,
     'SA_US_SALES',
     'SRC_US_SALES',
     'US',
@@ -94,8 +90,6 @@ WHERE NOT EXISTS (
       AND bl_3nf.source_system = 'SA_US_SALES'
 );
 COMMIT;
-
-
 
 -- CE_CHANNELS: International
 BEGIN;
@@ -122,8 +116,6 @@ WHERE NOT EXISTS (
 );
 COMMIT;
 
-
-
 -- CE_CHANNELS: United States
 BEGIN;
 INSERT INTO bl_3nf.ce_channels (channel_id, channel, source_system, source_entity, channel_src_id, insert_dt, update_dt)
@@ -149,10 +141,9 @@ WHERE NOT EXISTS (
 );
 COMMIT;
 
--- CE_EMPLOYEES: International
+-- CE_EMPLOYEES: International (Fixed: Added insert_dt mapping)
 BEGIN;
-
-INSERT INTO bl_3nf.ce_employees (sales_rep_id, sales_rep_first_name, sales_rep_last_name, sales_rep_email, source_system, source_entity, sales_rep_src_id, update_dt)
+INSERT INTO bl_3nf.ce_employees (sales_rep_id, sales_rep_first_name, sales_rep_last_name, sales_rep_email, source_system, source_entity, sales_rep_src_id, insert_dt, update_dt)
 SELECT 
     nextval('bl_3nf.seq_employees_id'),
     src.first_name,
@@ -161,6 +152,7 @@ SELECT
     'SA_INT_SALES',
     'SRC_INT_SALES',
     src.rep_src_id,
+    CURRENT_DATE,
     CURRENT_DATE
 FROM (
     SELECT DISTINCT 
@@ -173,16 +165,14 @@ FROM (
 ) src
 WHERE NOT EXISTS (
     SELECT 1 FROM bl_3nf.ce_employees bl_3nf 
-    WHERE bl_3nf.sales_rep_src_id = src.rep_src_id -- Fixed column name
+    WHERE bl_3nf.sales_rep_src_id = src.rep_src_id 
       AND bl_3nf.source_system = 'SA_INT_SALES'
 );
-
 COMMIT;
 
--- CE_EMPLOYEES: United States
-
+-- CE_EMPLOYEES: United States (Fixed: Added insert_dt mapping)
 BEGIN;
-INSERT INTO bl_3nf.ce_employees (sales_rep_id, sales_rep_first_name, sales_rep_last_name, sales_rep_email, source_system, source_entity, sales_rep_src_id, update_dt)
+INSERT INTO bl_3nf.ce_employees (sales_rep_id, sales_rep_first_name, sales_rep_last_name, sales_rep_email, source_system, source_entity, sales_rep_src_id, insert_dt, update_dt)
 SELECT 
     nextval('bl_3nf.seq_employees_id'),
     src.first_name,
@@ -191,6 +181,7 @@ SELECT
     'SA_US_SALES',
     'SRC_US_SALES',
     src.rep_src_id,
+    CURRENT_DATE,
     CURRENT_DATE
 FROM (
     SELECT DISTINCT 
@@ -317,7 +308,6 @@ WHERE NOT EXISTS (
 );
 COMMIT;
 
-
 -- CE_PRODUCTS: International Source
 BEGIN;
 INSERT INTO bl_3nf.ce_products (product_id, product_subcategory_id, source_system, source_entity, product_src_id, insert_dt, update_dt)
@@ -346,7 +336,6 @@ WHERE NOT EXISTS (
 );
 COMMIT;
 
- 
 -- CE_PRODUCTS: United States Source
 BEGIN;
 INSERT INTO bl_3nf.ce_products (product_id, product_subcategory_id, source_system, source_entity, product_src_id, insert_dt, update_dt)
@@ -495,10 +484,9 @@ WHERE NOT EXISTS (
 );
 COMMIT;
 
-
-- CE_CUSTOMERS_SCD: International
+-- CE_CUSTOMERS_SCD: International (Fixed: Added insert_dt and update_dt fields)
 BEGIN;
-INSERT INTO bl_3nf.ce_customers_scd (customer_id, customer_first_name, customer_last_name, customer_email, customer_age, customer_gender, customer_segment, source_system, source_entity, customer_src_id, is_active, start_dt, end_dt)
+INSERT INTO bl_3nf.ce_customers_scd (customer_id, customer_first_name, customer_last_name, customer_email, customer_age, customer_gender, customer_segment, source_system, source_entity, customer_src_id, is_active, start_dt, end_dt, insert_dt, update_dt)
 SELECT 
     nextval('bl_3nf.seq_customers_id'),
     src.first_name,
@@ -512,7 +500,9 @@ SELECT
     src.cust_src_id,
     'Y',
     '1900-01-01'::DATE,
-    '9999-12-31'::DATE
+    '9999-12-31'::DATE,
+    CURRENT_DATE,
+    CURRENT_DATE
 FROM (
     SELECT DISTINCT 
         COALESCE(NULLIF(CUSTOMER_ID_INT, ''), 'n. a.') as cust_src_id,
@@ -532,9 +522,9 @@ WHERE NOT EXISTS (
 );
 COMMIT;
 
--- CE_CUSTOMERS_SCD: United States
+-- CE_CUSTOMERS_SCD: United States (Fixed: Added insert_dt and update_dt fields)
 BEGIN;
-INSERT INTO bl_3nf.ce_customers_scd (customer_id, customer_first_name, customer_last_name, customer_email, customer_age, customer_gender, customer_segment, source_system, source_entity, customer_src_id, is_active, start_dt, end_dt)
+INSERT INTO bl_3nf.ce_customers_scd (customer_id, customer_first_name, customer_last_name, customer_email, customer_age, customer_gender, customer_segment, source_system, source_entity, customer_src_id, is_active, start_dt, end_dt, insert_dt, update_dt)
 SELECT 
     nextval('bl_3nf.seq_customers_id'),
     src.first_name,
@@ -548,7 +538,9 @@ SELECT
     src.cust_src_id,
     'Y',
     '1900-01-01'::DATE,
-    '9999-12-31'::DATE
+    '9999-12-31'::DATE,
+    CURRENT_DATE,
+    CURRENT_DATE
 FROM (
     SELECT DISTINCT 
         COALESCE(NULLIF(CUSTOMER_ID, ''), 'n. a.') as cust_src_id,
@@ -568,14 +560,14 @@ WHERE NOT EXISTS (
 );
 COMMIT;
 
-
--- CE_ORDERS: INTERNATIONAL
+-- CE_ORDERS: INTERNATIONAL (Fixed: Grain changed to subchannel_id and city_id; mapped lineage and order_src_id)
 BEGIN;
 INSERT INTO bl_3nf.ce_orders (
     order_id, order_dt, order_status, returned, customer_id, sales_rep_id, 
-    product_id, channel_id, country_id, payment_method, unit_price, quantity, 
+    product_id, subchannel_id, city_id, payment_method, unit_price, quantity, 
     discount_percent, discount_amount, shipping_cost, tax_amount, order_amount, 
-    cost_amount, profit_margin_percent, profit_amount, transaction_id, insert_dt, update_dt
+    cost_amount, profit_margin_percent, profit_amount, transaction_id, 
+    source_system, source_entity, order_src_id, insert_dt, update_dt
 )
 SELECT 
     nextval('bl_3nf.seq_orders_id'),
@@ -585,8 +577,8 @@ SELECT
     COALESCE(cust.customer_id, -1),
     COALESCE(emp.sales_rep_id, -1),
     COALESCE(prod.product_id, -1),
-    COALESCE(chan.channel_id, -1),
-    COALESCE(cnt.country_id, -1),
+    COALESCE(sub.subchannel_id, -1),
+    COALESCE(cit.city_id, -1),
     COALESCE(stg.PAYMENT, 'n. a.'),
     COALESCE(NULLIF(stg.PRICE, '')::NUMERIC(10,2), 0.00),
     COALESCE(NULLIF(stg.QUANTITY_INT, '')::BIGINT, 0),
@@ -598,6 +590,9 @@ SELECT
     COALESCE(NULLIF(stg.COST_AMOUNT_INT, '')::NUMERIC(10,2), 0.00),
     COALESCE(NULLIF(stg.PPROFIT_MARGIN_PERCENT_INT, '')::NUMERIC(10,2), 0.00),
     COALESCE(NULLIF(stg.PROFIT_AMOUNT_INT, '')::NUMERIC(10,2), 0.00),
+    stg.ORDER_ID_INT,
+    'SA_INT_SALES',
+    'SRC_INT_SALES',
     stg.ORDER_ID_INT,
     CURRENT_DATE,
     CURRENT_DATE
@@ -615,25 +610,33 @@ LEFT JOIN bl_3nf.ce_products prod
 LEFT JOIN bl_3nf.ce_subchannels sub 
     ON sub.subchannel_src_id = stg.SUBCHANNEL 
    AND sub.source_system = 'SA_INT_SALES'
-LEFT JOIN bl_3nf.ce_channels chan 
-    ON chan.channel_id = sub.channel_id
 LEFT JOIN bl_3nf.ce_countries cnt 
     ON cnt.country_name_src_id = stg.COUNTRY 
    AND cnt.source_system = 'SA_INT_SALES'
+LEFT JOIN bl_3nf.ce_states state
+    ON state.state_name_src_id = 'n. a.'
+   AND state.country_id = cnt.country_id
+   AND state.source_system = 'SA_INT_SALES'
+LEFT JOIN bl_3nf.ce_cities cit 
+    ON cit.city_name_src_id = stg.CITY_INT 
+   AND cit.state_id = state.state_id
+   AND cit.source_system = 'SA_INT_SALES'
 WHERE NOT EXISTS (
     SELECT 1 FROM bl_3nf.ce_orders bl_3nf 
     WHERE bl_3nf.transaction_id = stg.ORDER_ID_INT 
+      AND bl_3nf.source_system = 'SA_INT_SALES'
 );
 COMMIT;
 
 
--- CE_ORDERS: United States
+-- CE_ORDERS: United States (Fixed: Grain changed to subchannel_id and city_id; mapped lineage and order_src_id)
 BEGIN;
 INSERT INTO bl_3nf.ce_orders (
     order_id, order_dt, order_status, returned, customer_id, sales_rep_id, 
-    product_id, channel_id, country_id, payment_method, unit_price, quantity, 
+    product_id, subchannel_id, city_id, payment_method, unit_price, quantity, 
     discount_percent, discount_amount, shipping_cost, tax_amount, order_amount, 
-    cost_amount, profit_margin_percent, profit_amount, transaction_id, insert_dt, update_dt
+    cost_amount, profit_margin_percent, profit_amount, transaction_id, 
+    source_system, source_entity, order_src_id, insert_dt, update_dt
 )
 SELECT 
     nextval('bl_3nf.seq_orders_id'),
@@ -643,8 +646,8 @@ SELECT
     COALESCE(cust.customer_id, -1),
     COALESCE(emp.sales_rep_id, -1),
     COALESCE(prod.product_id, -1),
-    COALESCE(chan.channel_id, -1),
-    COALESCE(cnt.country_id, -1),
+    COALESCE(sub.subchannel_id, -1),
+    COALESCE(cit.city_id, -1),
     COALESCE(stg.PAYMENT_METHOD, 'n. a.'),
     COALESCE(NULLIF(stg.UNIT_PRICE, '')::NUMERIC(10,2), 0.00),
     COALESCE(NULLIF(stg.QUANTITY, '')::BIGINT, 0),
@@ -656,6 +659,9 @@ SELECT
     COALESCE(NULLIF(stg.COST_AMOUNT, '')::NUMERIC(10,2), 0.00),
     COALESCE(NULLIF(stg.PROFIT_MARGIN_PERCENT, '')::NUMERIC(10,2), 0.00),
     COALESCE(NULLIF(stg.PROFIT_MARGIN_AMOUNT, '')::NUMERIC(10,2), 0.00),
+    stg.ORDER_ID,
+    'SA_US_SALES',
+    'SRC_US_SALES',
     stg.ORDER_ID,
     CURRENT_DATE,
     CURRENT_DATE
@@ -673,13 +679,22 @@ LEFT JOIN bl_3nf.ce_products prod
 LEFT JOIN bl_3nf.ce_subchannels sub 
     ON sub.subchannel_src_id = stg.SUBCHANNEL 
    AND sub.source_system = 'SA_US_SALES'
-LEFT JOIN bl_3nf.ce_channels chan 
-    ON chan.channel_id = sub.channel_id
 LEFT JOIN bl_3nf.ce_countries cnt 
     ON cnt.country_name_src_id = 'US'
    AND cnt.source_system = 'SA_US_SALES'
+LEFT JOIN bl_3nf.ce_states state
+    ON state.state_name_src_id = stg.STATE
+   AND state.country_id = cnt.country_id
+   AND state.source_system = 'SA_US_SALES'
+LEFT JOIN bl_3nf.ce_cities cit 
+    ON cit.city_name_src_id = stg.CITY 
+   AND cit.state_id = state.state_id
+   AND cit.source_system = 'SA_US_SALES'
 WHERE NOT EXISTS (
     SELECT 1 FROM bl_3nf.ce_orders bl_3nf 
     WHERE bl_3nf.transaction_id = stg.ORDER_ID
+      AND bl_3nf.source_system = 'SA_US_SALES'
 );
 COMMIT;
+
+
