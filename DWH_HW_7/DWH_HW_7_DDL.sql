@@ -91,6 +91,21 @@ CREATE TABLE IF NOT EXISTS bl_dm.dim_customers_scd (
     CONSTRAINT pk_dim_customers_scd PRIMARY KEY (customer_surr_id)
 );
 
+-- DIM_ORDER_DETAILS
+
+CREATE TABLE IF NOT EXISTS bl_dm.dim_orders_details (
+    order_surr_id BIGINT NOT NULL,
+    order_status VARCHAR NOT NULL,
+    returned VARCHAR NOT NULL,
+    payment_method VARCHAR NOT NULL,
+    source_system VARCHAR NOT NULL,
+    source_entity VARCHAR NOT NULL,
+    order_src_id VARCHAR NOT NULL,
+    insert_dt DATE NOT NULL,
+    update_dt DATE NOT NULL,
+    CONSTRAINT pk_dim_orders_details PRIMARY KEY (order_surr_id)
+);
+
 -- FCT_ORDERS_DD
 CREATE TABLE IF NOT EXISTS bl_dm.fct_orders_dd (
     order_surr_id BIGINT NOT NULL,
@@ -167,5 +182,12 @@ INSERT INTO bl_dm.dim_customers_scd (
 SELECT -1, 'n. a.', 'n. a.', 'n. a.', 'n. a.', 'n. a.', 'n. a.', 'n. a.', 
        '1900-01-01'::DATE, '9999-12-31'::DATE, 'Y', 'MANUAL', 'MANUAL', '1900-01-01'::DATE, '1900-01-01'::DATE
 WHERE NOT EXISTS (SELECT 1 FROM bl_dm.dim_customers_scd WHERE customer_surr_id = -1);
+
+INSERT INTO bl_dm.dim_orders_details (
+    order_surr_id, order_status, returned, payment_method, 
+    source_system, source_entity, order_src_id, insert_dt, update_dt
+)
+SELECT -1, 'n. a.', 'n. a.', 'n. a.', 'MANUAL', 'MANUAL', 'n. a.', '1900-01-01'::DATE, '1900-01-01'::DATE
+WHERE NOT EXISTS (SELECT 1 FROM bl_dm.dim_orders_details WHERE order_surr_id = -1);
 
 COMMIT;
