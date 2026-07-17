@@ -1,12 +1,15 @@
 -- STEP 1: SCHEMA GENERATION & CLEANUP
 CREATE SCHEMA IF NOT EXISTS bl_dm;
 
+drop schema bl_dm cascade
+
 -- STEP 2: INITIALIZE SEQUENCES
 CREATE SEQUENCE IF NOT EXISTS bl_dm.seq_dim_products_surr_id START WITH 1;
 CREATE SEQUENCE IF NOT EXISTS bl_dm.seq_dim_customers_surr_id START WITH 1;
 CREATE SEQUENCE IF NOT EXISTS bl_dm.seq_dim_employees_surr_id START WITH 1;
-CREATE SEQUENCE IF NOT EXISTS bl_dm.seq_dim_geographies_surr_id START WITH 1;
+CREATE SEQUENCE IF NOT EXISTS bl_dm.seq_dim_locations_surr_id START WITH 1;
 CREATE SEQUENCE IF NOT EXISTS bl_dm.seq_dim_channels_surr_id START WITH 1;
+CREATE SEQUENCE IF NOT EXISTS bl_dm.seq_order_details_surr_id START WITH 1;
 
 
 -- STEP 3: TABLES CREATION
@@ -35,7 +38,7 @@ CREATE TABLE IF NOT EXISTS bl_dm.dim_locations (
     country_name VARCHAR NOT NULL,
     source_system VARCHAR NOT NULL,
     source_entity VARCHAR NOT NULL,
-    CITY_nameSRC_ID VARCHAR NOT NULL,
+    city_name_src_id VARCHAR NOT NULL,
     insert_dt DATE NOT NULL,
     update_dt DATE NOT NULL,
     CONSTRAINT pk_dim_locations PRIMARY KEY (city_surr_id)
@@ -154,7 +157,7 @@ SELECT -1, 'n. a.', -1, 'n. a.', -1, 'n. a.', 'MANUAL', 'MANUAL', '1900-01-01'::
 WHERE NOT EXISTS (SELECT 1 FROM bl_dm.dim_products WHERE product_surr_id = -1);
 
 INSERT INTO bl_dm.dim_locations (
-    city_surr_id, city_name_src_id, city, state_id, state, 
+    city_surr_id, city_name_src_id, city_name, state_id, state, 
     country_id, country_name, source_system, source_entity, insert_dt, update_dt
 )
 SELECT -1, -1, 'n. a.', -1, 'n. a.', -1, 'n. a.', 'MANUAL', 'MANUAL', '1900-01-01'::DATE, '1900-01-01'::DATE
