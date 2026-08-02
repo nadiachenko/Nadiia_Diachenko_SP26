@@ -32,12 +32,13 @@ CREATE SEQUENCE IF NOT EXISTS bl_cl.seq_mta_load_logs_id START WITH 1 INCREMENT 
 
 -- log table creation
 
-CREATE TABLE IF NOT EXISTS bl_cl.mta_load_logs (
+CREATE TABLE IF NOT exists bl_cl.mta_load_logs (
     log_id         BIGINT DEFAULT nextval('bl_cl.seq_mta_load_logs_id') NOT NULL,
     log_dt         TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     procedure_name VARCHAR NOT NULL,
     log_status     VARCHAR NOT NULL,
     rows_affected  INT,
+    log_sqlstate   VARCHAR(5),
     log_message    TEXT,
     CONSTRAINT pk_mta_load_logs PRIMARY KEY (log_id),
     CONSTRAINT chk_mta_load_logs_status CHECK (log_status IN ('SUCCESS','ERROR'))
@@ -48,18 +49,20 @@ CREATE OR REPLACE PROCEDURE bl_cl.p_log(
     p_procedure_name VARCHAR,
     p_log_status     VARCHAR,
     p_rows_affected  INT,
-    p_log_message    TEXT
+    p_log_message    TEXT,
+    p_sqlstate       VARCHAR DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    INSERT INTO bl_cl.mta_load_logs (procedure_name, log_status, rows_affected, log_message)
-    VALUES (p_procedure_name, p_log_status, p_rows_affected, p_log_message);
+    INSERT INTO bl_cl.mta_load_logs (procedure_name, log_status, rows_affected, log_sqlstate, log_message)
+    VALUES (p_procedure_name, p_log_status, p_rows_affected, p_sqlstate, p_log_message);
 END;
 $$;
 
 -- return table type function to display log table
-drop function bl_cl.get_load_summary
+
+
 CREATE OR REPLACE FUNCTION bl_cl.get_load_summary()
 RETURNS TABLE (
     log_id         BIGINT,
@@ -67,13 +70,15 @@ RETURNS TABLE (
     procedure_name VARCHAR,
     log_status     VARCHAR,
     rows_affected  INT,
+    log_sqlstate   VARCHAR(5),
     log_message    TEXT
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT l.log_id, l.log_dt, l.procedure_name, l.log_status, l.rows_affected, l.log_message
+    SELECT l.log_id, l.log_dt, l.procedure_name, l.log_status, 
+           l.rows_affected, l.log_sqlstate, l.log_message
     FROM bl_cl.mta_load_logs l
     ORDER BY l.log_id DESC;
 END;
@@ -93,7 +98,7 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
-    -- Prerequisite BL_3NF object checks
+     
     IF to_regclass('bl_3nf.ce_categories') IS NULL THEN
         RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_categories does not exist!';
     END IF;
@@ -151,7 +156,7 @@ BEGIN
     CALL bl_cl.p_log('load_ce_categories', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_categories', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_categories', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;
 
@@ -165,7 +170,7 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
-    -- Prerequisite BL_3NF object checks
+     
     IF to_regclass('bl_3nf.ce_countries') IS NULL THEN
         RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_countries does not exist!';
     END IF;
@@ -207,7 +212,7 @@ BEGIN
     CALL bl_cl.p_log('load_ce_countries', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_countries', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_countries', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;
 
@@ -222,7 +227,7 @@ DECLARE
     v_tmp      INT := 0;
     rec        RECORD;
 BEGIN
-    -- Prerequisite BL_3NF object checks
+     
     IF to_regclass('bl_3nf.ce_channels') IS NULL THEN
         RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_channels does not exist!';
     END IF;
@@ -261,7 +266,7 @@ BEGIN
     CALL bl_cl.p_log('load_ce_channels', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd || ' (FOR loop)');
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_channels', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_channels', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;
 
@@ -275,7 +280,7 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
-    -- Prerequisite BL_3NF object checks
+     
     IF to_regclass('bl_3nf.ce_employees') IS NULL THEN
         RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_employees does not exist!';
     END IF;
@@ -346,7 +351,7 @@ BEGIN
    CALL bl_cl.p_log('load_ce_employees', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_employees', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_employees', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;
 
@@ -360,7 +365,7 @@ DECLARE
     v_rows_exp INT := 0;
     v_tmp      INT := 0;
 BEGIN
-    -- Prerequisite BL_3NF object checks
+     
     IF to_regclass('bl_3nf.ce_customers_scd') IS NULL THEN
         RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_customers_scd does not exist!';
     END IF;
@@ -448,7 +453,7 @@ BEGIN
     CALL bl_cl.p_log('load_ce_customers_scd', 'SUCCESS', v_rows_ins + v_rows_exp,
                      'Inserted: ' || v_rows_ins || ', Expired: ' || v_rows_exp);
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_customers_scd', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_customers_scd', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;
 
@@ -462,7 +467,7 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
-    -- Prerequisite BL_3NF object checks
+     
     IF to_regclass('bl_3nf.ce_subcategories') IS NULL THEN
         RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_subcategories does not exist!';
     END IF;
@@ -543,7 +548,7 @@ BEGIN
     CALL bl_cl.p_log('load_ce_subcategories', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_subcategories', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_subcategories', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;
 
@@ -558,7 +563,7 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
-    -- Prerequisite BL_3NF object checks
+     
     IF to_regclass('bl_3nf.ce_states') IS NULL THEN
         RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_states does not exist!';
     END IF;
@@ -637,7 +642,7 @@ BEGIN
     CALL bl_cl.p_log('load_ce_states', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_states', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_states', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;
 
@@ -651,7 +656,7 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
-    -- Prerequisite BL_3NF object checks
+     
     IF to_regclass('bl_3nf.ce_subchannels') IS NULL THEN
         RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_subchannels does not exist!';
     END IF;
@@ -724,7 +729,7 @@ BEGIN
     CALL bl_cl.p_log('load_ce_subchannels', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_subchannels', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_subchannels', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;
 
@@ -738,7 +743,7 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
-    -- Prerequisite BL_3NF object checks
+     
     IF to_regclass('bl_3nf.ce_products') IS NULL THEN
         RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_products does not exist!';
     END IF;
@@ -805,7 +810,7 @@ BEGIN
     CALL bl_cl.p_log('load_ce_products', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_products', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_products', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;
 
@@ -819,7 +824,7 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
-    -- Prerequisite BL_3NF object checks
+     
     IF to_regclass('bl_3nf.ce_cities') IS NULL THEN
         RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_cities does not exist!';
     END IF;
@@ -902,7 +907,7 @@ BEGIN
     CALL bl_cl.p_log('load_ce_cities', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_cities', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_cities', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;
 
