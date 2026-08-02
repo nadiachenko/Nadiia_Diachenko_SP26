@@ -26,11 +26,16 @@ BEGIN
         WHERE dim_locations.city_name    IS DISTINCT FROM EXCLUDED.city_name
            OR dim_locations.state        IS DISTINCT FROM EXCLUDED.state
            OR dim_locations.country_name IS DISTINCT FROM EXCLUDED.country_name;
+           
     GET DIAGNOSTICS v_rows_aff = ROW_COUNT;
 
+    -- 1. Log SUCCESS (4 parameters, p_sqlstate defaults to NULL)
     CALL bl_cl.p_log('load_dim_locations', 'SUCCESS', v_rows_aff,
                      'Rows affected: ' || v_rows_aff || ' (upsert ON CONFLICT)');
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_dim_locations', 'ERROR', NULL, SQLERRM);
+    -- 2. Log ERROR with 5 parameters (including SQLSTATE) and propagate exception
+    CALL bl_cl.p_log('load_dim_locations', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

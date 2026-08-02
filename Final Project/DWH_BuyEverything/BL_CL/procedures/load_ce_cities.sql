@@ -80,7 +80,10 @@ BEGIN
 
     CALL bl_cl.p_log('load_ce_cities', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_cities', 'ERROR', NULL, SQLERRM);
+
+    CALL bl_cl.p_log('load_ce_cities', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

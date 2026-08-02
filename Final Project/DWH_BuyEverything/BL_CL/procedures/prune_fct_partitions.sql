@@ -23,9 +23,10 @@ BEGIN
         EXECUTE format('DROP TABLE bl_dm.%I', rec.part_name);
         v_dropped := v_dropped + 1;
     END LOOP;
-    CALL bl_cl.p_log('prune_fct_partitions', 'SUCCESS', v_dropped,
+   CALL bl_cl.p_log('prune_fct_partitions', 'SUCCESS', v_dropped,
                      'Detached/dropped ' || v_dropped || ' partition(s) older than ' || v_cutoff);
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('prune_fct_partitions', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('prune_fct_partitions', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

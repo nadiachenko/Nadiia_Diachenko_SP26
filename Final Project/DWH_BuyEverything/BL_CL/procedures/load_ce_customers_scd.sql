@@ -88,7 +88,10 @@ BEGIN
 
     CALL bl_cl.p_log('load_ce_customers_scd', 'SUCCESS', v_rows_ins + v_rows_exp,
                      'Inserted: ' || v_rows_ins || ', Expired: ' || v_rows_exp);
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_customers_scd', 'ERROR', NULL, SQLERRM);
+
+    CALL bl_cl.p_log('load_ce_customers_scd', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

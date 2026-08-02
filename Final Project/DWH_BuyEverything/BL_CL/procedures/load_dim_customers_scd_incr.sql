@@ -56,7 +56,10 @@ BEGIN
     CALL bl_cl.p_log('load_dim_customers_scd_incr', 'SUCCESS', v_rows_ins + v_rows_exp,
                      'Inserted: ' || v_rows_ins || ', Expired: ' || v_rows_exp ||
                      ' (incremental since ' || v_watermark || ')');
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_dim_customers_scd_incr', 'ERROR', NULL, SQLERRM);
+    -- 5. Log ERROR with SQLSTATE and propagate exception
+    CALL bl_cl.p_log('load_dim_customers_scd_incr', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

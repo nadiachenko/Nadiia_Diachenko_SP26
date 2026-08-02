@@ -28,9 +28,12 @@ BEGIN
                 src.source_entity, src.country_src_id, CURRENT_DATE, CURRENT_DATE);
     GET DIAGNOSTICS v_rows_aff = ROW_COUNT;
 
-    CALL bl_cl.p_log('load_ce_countries', 'SUCCESS', v_rows_aff,
+   CALL bl_cl.p_log('load_ce_countries', 'SUCCESS', v_rows_aff,
                      'Rows affected: ' || v_rows_aff || ' (MERGE)');
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_countries', 'ERROR', NULL, SQLERRM);
+
+    CALL bl_cl.p_log('load_ce_countries', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

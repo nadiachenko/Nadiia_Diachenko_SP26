@@ -39,8 +39,11 @@ BEGIN
     END LOOP;
 
     CALL bl_cl.p_log('load_ce_channels', 'SUCCESS', v_rows_ins + v_rows_upd,
-                     'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd || ' (FOR loop)');
+                     'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_channels', 'ERROR', NULL, SQLERRM);
+
+    CALL bl_cl.p_log('load_ce_channels', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

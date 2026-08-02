@@ -3,6 +3,7 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_rows_ins  INT = 0;
+    v_rows_upd  INT = 0;
     v_tmp       INT = 0;
     v_watermark TIMESTAMP;
 BEGIN
@@ -20,7 +21,7 @@ BEGIN
             COALESCE(NULLIF(o.returned, ''), 'n. a.')                         AS returned,
             COALESCE(NULLIF(o.customer_id_int, ''), 'n. a.')                  AS customer_src_id,
             COALESCE(NULLIF(o.sales_rep_id_int, ''), 'n. a.')                 AS rep_src_id,
-            COALESCE(NULLIF(o.product_id_int, ''), 'n. a.')                    AS product_src_id,
+            COALESCE(NULLIF(o.product_id_int, ''), 'n. a.')                   AS product_src_id,
             COALESCE(NULLIF(o.subchannel, ''), 'n. a.')                       AS subchannel_src_id,
             COALESCE(NULLIF(o.city_int, ''), 'n. a.')                         AS city_src_id,
             COALESCE(NULLIF(o.payment, ''), 'n. a.')                          AS payment_method,
@@ -49,7 +50,7 @@ BEGIN
         LEFT JOIN bl_3nf.ce_customers_scd c
                ON c.customer_src_id = s.customer_src_id
               AND c.source_system   = 'SA_INT_SALES'
-              AND c.is_active       = 'Y'
+              AND s.order_dt BETWEEN c.start_dt AND c.end_dt
         LEFT JOIN bl_3nf.ce_employees e
                ON e.sales_rep_src_id = s.rep_src_id     AND e.source_system = 'SA_INT_SALES'
         LEFT JOIN bl_3nf.ce_products p
@@ -74,15 +75,18 @@ BEGIN
            'SA_INT_SALES', 'SRC_INT_SALES', m.order_src_id, CURRENT_DATE, CURRENT_DATE
     FROM mapped m
     ON CONFLICT (order_src_id, source_system) DO UPDATE           
-        SET customer_id   = EXCLUDED.customer_id,
-            order_status  = EXCLUDED.order_status,
+        SET order_status  = EXCLUDED.order_status,
             returned      = EXCLUDED.returned,
             order_amount  = EXCLUDED.order_amount,
             profit_amount = EXCLUDED.profit_amount,
-            update_dt     = CURRENT_DATE;
+            update_dt     = CURRENT_DATE
+        WHERE ce_orders.order_status  IS DISTINCT FROM EXCLUDED.order_status
+           OR ce_orders.returned      IS DISTINCT FROM EXCLUDED.returned
+           OR ce_orders.order_amount  IS DISTINCT FROM EXCLUDED.order_amount
+           OR ce_orders.profit_amount IS DISTINCT FROM EXCLUDED.profit_amount;
     GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_ins = v_rows_ins + v_tmp;
 
-    -- US source
+    --US source
     WITH incoming AS (
         SELECT
             COALESCE(NULLIF(o.order_id, ''), 'n. a.')                        AS order_src_id,
@@ -121,13 +125,14 @@ BEGIN
         LEFT JOIN bl_3nf.ce_customers_scd c
                ON c.customer_src_id = s.customer_src_id
               AND c.source_system   = 'SA_US_SALES'
-              AND c.is_active       = 'Y'
+              AND s.order_dt BETWEEN c.start_dt AND c.end_dt
         LEFT JOIN bl_3nf.ce_employees e
                ON e.sales_rep_src_id = s.rep_src_id     AND e.source_system = 'SA_US_SALES'
         LEFT JOIN bl_3nf.ce_products p
                ON p.product_src_id   = s.product_src_id AND p.source_system = 'SA_US_SALES'
         LEFT JOIN bl_3nf.ce_subchannels sc
                ON sc.subchannel_src_id = s.subchannel_src_id AND sc.source_system = 'SA_US_SALES'
+        -- US cities are disambiguated by state (same city name in several states)
         LEFT JOIN bl_3nf.ce_states st
                ON st.state_name_src_id = s.state_src_id AND st.source_system = 'SA_US_SALES'
         LEFT JOIN bl_3nf.ce_cities ci
@@ -150,18 +155,21 @@ BEGIN
            'SA_US_SALES', 'SRC_US_SALES', m.order_src_id, CURRENT_DATE, CURRENT_DATE
     FROM mapped m
     ON CONFLICT (order_src_id, source_system) DO UPDATE
-        SET customer_id   = EXCLUDED.customer_id,
-            order_status  = EXCLUDED.order_status,
+        SET order_status  = EXCLUDED.order_status,
             returned      = EXCLUDED.returned,
             order_amount  = EXCLUDED.order_amount,
             profit_amount = EXCLUDED.profit_amount,
-            update_dt     = CURRENT_DATE;
+            update_dt     = CURRENT_DATE
+        WHERE ce_orders.order_status  IS DISTINCT FROM EXCLUDED.order_status
+           OR ce_orders.returned      IS DISTINCT FROM EXCLUDED.returned
+           OR ce_orders.order_amount  IS DISTINCT FROM EXCLUDED.order_amount
+           OR ce_orders.profit_amount IS DISTINCT FROM EXCLUDED.profit_amount;
     GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_ins = v_rows_ins + v_tmp;
 
     CALL bl_cl.p_log('load_ce_orders', 'SUCCESS', v_rows_ins,
                      'Rows affected: ' || v_rows_ins ||
                      ' (incremental since ' || v_watermark || ')');
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_orders', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_ce_orders', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;

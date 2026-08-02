@@ -56,10 +56,13 @@ BEGIN
           AND tgt.source_system = 'SA_US_SALES');
     GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_ins := v_rows_ins + v_tmp;
 
-    CALL bl_cl.p_log('load_ce_categories', 'SUCCESS', v_rows_ins + v_rows_upd,
+CALL bl_cl.p_log('load_ce_categories', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_categories', 'ERROR', NULL, SQLERRM);
+
+    CALL bl_cl.p_log('load_ce_categories', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;
 

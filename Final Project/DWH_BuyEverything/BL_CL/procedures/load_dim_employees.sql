@@ -21,18 +21,22 @@ BEGIN
         FETCH v_cur INTO v_src_id, v_fname, v_lname, v_email;
         EXIT WHEN NOT FOUND;
 
+        -- UPDATE if attributes changed
         UPDATE bl_dm.dim_employees tgt
         SET sales_rep_first_name = v_fname,
             sales_rep_last_name  = v_lname,
             sales_rep_email      = v_email,
-            update_dt = CURRENT_DATE
+            update_dt            = CURRENT_DATE
         WHERE tgt.sales_rep_src_id = v_src_id
           AND tgt.source_system    = 'BL_3NF'
           AND (tgt.sales_rep_first_name IS DISTINCT FROM v_fname
             OR tgt.sales_rep_last_name  IS DISTINCT FROM v_lname
             OR tgt.sales_rep_email      IS DISTINCT FROM v_email);
-        GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_upd = v_rows_upd + v_tmp;
+            
+        GET DIAGNOSTICS v_tmp = ROW_COUNT; 
+        v_rows_upd := v_rows_upd + v_tmp;
 
+        -- INSERT if new record
         INSERT INTO bl_dm.dim_employees (
             sales_rep_surr_id, sales_rep_first_name, sales_rep_last_name,
             sales_rep_email, source_system, source_entity, sales_rep_src_id,
@@ -40,14 +44,25 @@ BEGIN
         SELECT nextval('bl_dm.seq_dim_employees_surr_id'),
                v_fname, v_lname, v_email, 'BL_3NF', 'CE_EMPLOYEES', v_src_id,
                CURRENT_DATE, CURRENT_DATE
-        WHERE NOT EXISTS (SELECT 1 FROM bl_dm.dim_employees tgt
-            WHERE tgt.sales_rep_src_id = v_src_id AND tgt.source_system = 'BL_3NF');
-        GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_ins = v_rows_ins + v_tmp;
+        WHERE NOT EXISTS (
+            SELECT 1 FROM bl_dm.dim_employees tgt
+            WHERE tgt.sales_rep_src_id = v_src_id 
+              AND tgt.source_system    = 'BL_3NF'
+        );
+        
+        GET DIAGNOSTICS v_tmp = ROW_COUNT; 
+        v_rows_ins := v_rows_ins + v_tmp;
     END LOOP;
-    CLOSE v_cur;   -- release the cursor
+    
+    CLOSE v_cur;   -- Release the cursor
+
+    -- 1. Log SUCCESS (4 parameters, p_sqlstate defaults to NULL)
     CALL bl_cl.p_log('load_dim_employees', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd || ' (cursor variable)');
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_dim_employees', 'ERROR', NULL, SQLERRM);
+    -- 2. Log ERROR with 5 parameters (including SQLSTATE) and propagate exception
+    CALL bl_cl.p_log('load_dim_employees', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

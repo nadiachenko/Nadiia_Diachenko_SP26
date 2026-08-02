@@ -50,9 +50,12 @@ BEGIN
           AND tgt.is_active = 'Y');
     GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_ins = v_rows_ins + v_tmp;
 
-    CALL bl_cl.p_log('load_dim_customers_scd', 'SUCCESS', v_rows_ins + v_rows_exp,
-                     'Inserted: ' || v_rows_ins || ', Expired: ' || v_rows_exp || ' (SCD2)');
+   CALL bl_cl.p_log('load_dim_customers_scd', 'SUCCESS', v_rows_ins + v_rows_upd,
+                     'Inserted: ' || v_rows_ins || ', Synced: ' || v_rows_upd || ' (SCD2 mirror of 3NF)');
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_dim_customers_scd', 'ERROR', NULL, SQLERRM);
+
+    CALL bl_cl.p_log('load_dim_customers_scd', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

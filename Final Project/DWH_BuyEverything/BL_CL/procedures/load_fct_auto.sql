@@ -33,6 +33,6 @@ BEGIN
                      'Auto rolling-window: loaded ' || v_loaded ||
                      ' month(s) from ' || v_win_start || ', pruned older');
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_fct_auto', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_fct_auto', 'ERROR', NULL, SQLERRM, SQLSTATE);
 END;
 $$;

@@ -68,9 +68,12 @@ BEGIN
         WHERE tgt.subchannel_src_id = src.subchannel_src_id AND tgt.source_system = 'SA_US_SALES');
     GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_ins := v_rows_ins + v_tmp;
 
-    CALL bl_cl.p_log('load_ce_subchannels', 'SUCCESS', v_rows_ins + v_rows_upd,
+   CALL bl_cl.p_log('load_ce_subchannels', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd);
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_ce_subchannels', 'ERROR', NULL, SQLERRM);
+
+    CALL bl_cl.p_log('load_ce_subchannels', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

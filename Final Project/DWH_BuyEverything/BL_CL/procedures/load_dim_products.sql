@@ -59,6 +59,7 @@ BEGIN
     CALL bl_cl.p_log('load_dim_products', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd || ' (composite type)');
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_dim_products', 'ERROR', NULL, SQLERRM);
+    CALL bl_cl.p_log('load_dim_products', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;

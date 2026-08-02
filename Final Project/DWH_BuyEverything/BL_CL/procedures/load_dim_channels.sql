@@ -17,15 +17,21 @@ DECLARE
         ORDER BY COALESCE(ch.channel, 'n. a.'), sc.subchannel, sc.subchannel_id; 
 BEGIN
     FOR rec IN c_channels LOOP
+        -- 1. UPDATE if attributes changed
         UPDATE bl_dm.dim_channels tgt
-        SET channel_id = rec.channel_id,
-            update_dt  = CURRENT_DATE
-        WHERE tgt.subchannel = rec.subchannel
-          AND tgt.channel    = rec.channel
+        SET channel_id         = rec.channel_id,
+            subchannel_src_id  = rec.subchannel_src_id,
+            update_dt          = CURRENT_DATE
+        WHERE tgt.subchannel    = rec.subchannel
+          AND tgt.channel       = rec.channel
           AND tgt.source_system = 'BL_3NF'
-          AND tgt.channel_id IS DISTINCT FROM rec.channel_id;
-        GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_upd = v_rows_upd + v_tmp;
+          AND (tgt.channel_id        IS DISTINCT FROM rec.channel_id
+            OR tgt.subchannel_src_id IS DISTINCT FROM rec.subchannel_src_id);
+            
+        GET DIAGNOSTICS v_tmp = ROW_COUNT; 
+        v_rows_upd := v_rows_upd + v_tmp;
 
+        -- 2. INSERT if new record
         INSERT INTO bl_dm.dim_channels (
             subchannel_surr_id, subchannel, channel_id, channel,
             source_system, source_entity, subchannel_src_id, insert_dt, update_dt)
@@ -33,16 +39,24 @@ BEGIN
                rec.subchannel, rec.channel_id, rec.channel,
                'BL_3NF', 'CE_SUBCHANNELS', rec.subchannel_src_id,
                CURRENT_DATE, CURRENT_DATE
-        WHERE NOT EXISTS (SELECT 1 FROM bl_dm.dim_channels tgt
-            WHERE tgt.subchannel = rec.subchannel
-              AND tgt.channel    = rec.channel
-              AND tgt.source_system = 'BL_3NF');
-        GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_ins = v_rows_ins + v_tmp;
+        WHERE NOT EXISTS (
+            SELECT 1 FROM bl_dm.dim_channels tgt
+            WHERE tgt.subchannel    = rec.subchannel
+              AND tgt.channel       = rec.channel
+              AND tgt.source_system = 'BL_3NF'
+        );
+        
+        GET DIAGNOSTICS v_tmp = ROW_COUNT; 
+        v_rows_ins := v_rows_ins + v_tmp;
     END LOOP;
 
+    -- 3. Log SUCCESS (4 parameters, p_sqlstate defaults to NULL)
     CALL bl_cl.p_log('load_dim_channels', 'SUCCESS', v_rows_ins + v_rows_upd,
                      'Inserted: ' || v_rows_ins || ', Updated: ' || v_rows_upd || ' (cursor FOR loop, conformed)');
+
 EXCEPTION WHEN OTHERS THEN
-    CALL bl_cl.p_log('load_dim_channels', 'ERROR', NULL, SQLERRM);
+    -- 4. Log ERROR with 5 parameters (including SQLSTATE) and propagate exception
+    CALL bl_cl.p_log('load_dim_channels', 'ERROR', NULL, SQLERRM, SQLSTATE);
+    RAISE;
 END;
 $$;
