@@ -8,35 +8,42 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA bl_dm
 ALTER DEFAULT PRIVILEGES IN SCHEMA bl_dm
     GRANT USAGE, SELECT ON SEQUENCES TO dwh_user;
 
-  
+
 
 --  LOGGING (will be reused from Task 7)
 CREATE SEQUENCE IF NOT EXISTS bl_cl.seq_mta_load_logs_id START WITH 1 INCREMENT BY 1;
 
-CREATE TABLE IF NOT EXISTS bl_cl.mta_load_logs (
+-- log table creation
+
+CREATE TABLE IF NOT exists bl_cl.mta_load_logs (
     log_id         BIGINT DEFAULT nextval('bl_cl.seq_mta_load_logs_id') NOT NULL,
     log_dt         TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     procedure_name VARCHAR NOT NULL,
     log_status     VARCHAR NOT NULL,
     rows_affected  INT,
+    log_sqlstate   VARCHAR(5),
     log_message    TEXT,
     CONSTRAINT pk_mta_load_logs PRIMARY KEY (log_id),
     CONSTRAINT chk_mta_load_logs_status CHECK (log_status IN ('SUCCESS','ERROR'))
 );
+-- procedure to log outcome of tables insert/update data
 
 CREATE OR REPLACE PROCEDURE bl_cl.p_log(
     p_procedure_name VARCHAR,
     p_log_status     VARCHAR,
     p_rows_affected  INT,
-    p_log_message    TEXT
+    p_log_message    TEXT,
+    p_sqlstate       VARCHAR DEFAULT NULL
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    INSERT INTO bl_cl.mta_load_logs (procedure_name, log_status, rows_affected, log_message)
-    VALUES (p_procedure_name, p_log_status, p_rows_affected, p_log_message);
+    INSERT INTO bl_cl.mta_load_logs (procedure_name, log_status, rows_affected, log_sqlstate, log_message)
+    VALUES (p_procedure_name, p_log_status, p_rows_affected, p_sqlstate, p_log_message);
 END;
 $$;
+
+-- return table type function to display log table
 
 CREATE OR REPLACE FUNCTION bl_cl.get_load_summary()
 RETURNS TABLE (
@@ -45,13 +52,15 @@ RETURNS TABLE (
     procedure_name VARCHAR,
     log_status     VARCHAR,
     rows_affected  INT,
+    log_sqlstate   VARCHAR(5),
     log_message    TEXT
 )
 LANGUAGE plpgsql
 AS $$
 BEGIN
     RETURN QUERY
-    SELECT l.log_id, l.log_dt, l.procedure_name, l.log_status, l.rows_affected, l.log_message
+    SELECT l.log_id, l.log_dt, l.procedure_name, l.log_status, 
+           l.rows_affected, l.log_sqlstate, l.log_message
     FROM bl_cl.mta_load_logs l
     ORDER BY l.log_id DESC;
 END;
@@ -289,11 +298,6 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
-
-ALTER TABLE bl_dm.dim_locations
-    ADD CONSTRAINT uq_dim_locations_bk UNIQUE (city_name_src_id, source_system);
-
-
 -- DIM_CUSTOMERS_SCD   SCD TYPE 2
 
 CREATE OR REPLACE PROCEDURE bl_cl.load_dim_customers_scd()
@@ -301,31 +305,24 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     v_rows_ins INT = 0;
-    v_rows_exp INT = 0;
+    v_rows_upd INT = 0;
     v_tmp      INT = 0;
 BEGIN
-    -- Expireversions whose attributes changed vs the 3NF row
-    UPDATE bl_dm.dim_customers_scd tgt
-    SET is_active = 'N',
-        end_dt    = CURRENT_DATE - 1,
-        update_dt = CURRENT_DATE
-    FROM (SELECT customer_id::VARCHAR AS customer_src_id,
-                 customer_first_name, customer_last_name, customer_email,
-                 customer_age, customer_gender, customer_segment
-          FROM bl_3nf.ce_customers_scd
-          WHERE is_active = 'Y' AND customer_id <> -1) src
-    WHERE tgt.customer_src_id = src.customer_src_id
-      AND tgt.source_system   = 'BL_3NF'
-      AND tgt.is_active = 'Y'
-      AND (tgt.customer_first_name IS DISTINCT FROM src.customer_first_name
-        OR tgt.customer_last_name  IS DISTINCT FROM src.customer_last_name
-        OR tgt.customer_email      IS DISTINCT FROM src.customer_email
-        OR tgt.customer_age        IS DISTINCT FROM src.customer_age
-        OR tgt.customer_gender     IS DISTINCT FROM src.customer_gender
-        OR tgt.customer_segment    IS DISTINCT FROM src.customer_segment);
-    GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_exp = v_rows_exp + v_tmp;
 
-    -- Insert new active version
+    UPDATE bl_dm.dim_customers_scd tgt
+    SET end_dt    = src.end_dt,
+        is_active = src.is_active,
+        update_dt = CURRENT_DATE
+    FROM (SELECT customer_src_id, start_dt, end_dt, is_active
+          FROM bl_3nf.ce_customers_scd
+          WHERE customer_id <> -1) src
+    WHERE tgt.customer_src_id = src.customer_src_id
+      AND tgt.start_dt        = src.start_dt
+      AND tgt.source_system   = 'BL_3NF'
+      AND (tgt.end_dt    IS DISTINCT FROM src.end_dt
+        OR tgt.is_active IS DISTINCT FROM src.is_active);
+    GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_upd = v_rows_upd + v_tmp;
+
     INSERT INTO bl_dm.dim_customers_scd (
         customer_surr_id, customer_first_name, customer_last_name, customer_email,
         customer_age, customer_gender, customer_segment, start_dt, end_dt, is_active,
@@ -333,25 +330,25 @@ BEGIN
     SELECT nextval('bl_dm.seq_dim_customers_surr_id'),
            src.customer_first_name, src.customer_last_name, src.customer_email,
            src.customer_age, src.customer_gender, src.customer_segment,
-           CURRENT_DATE, DATE '9999-12-31', 'Y',
+           src.start_dt, src.end_dt, src.is_active,
            'BL_3NF', 'CE_CUSTOMERS_SCD', src.customer_src_id,
            CURRENT_DATE, CURRENT_DATE
-    FROM (SELECT customer_id::VARCHAR AS customer_src_id,
+    FROM (SELECT customer_src_id,
                  customer_first_name, customer_last_name, customer_email,
-                 customer_age, customer_gender, customer_segment
+                 customer_age, customer_gender, customer_segment,
+                 start_dt, end_dt, is_active
           FROM bl_3nf.ce_customers_scd
-          WHERE is_active = 'Y' AND customer_id <> -1) src
+          WHERE customer_id <> -1) src
     WHERE NOT EXISTS (
         SELECT 1 FROM bl_dm.dim_customers_scd tgt
         WHERE tgt.customer_src_id = src.customer_src_id
-          AND tgt.source_system   = 'BL_3NF'
-          AND tgt.is_active = 'Y');
+          AND tgt.start_dt        = src.start_dt
+          AND tgt.source_system   = 'BL_3NF');
     GET DIAGNOSTICS v_tmp = ROW_COUNT; v_rows_ins = v_rows_ins + v_tmp;
 
-    CALL bl_cl.p_log('load_dim_customers_scd', 'SUCCESS', v_rows_ins + v_rows_exp,
-                     'Inserted: ' || v_rows_ins || ', Expired: ' || v_rows_exp || ' (SCD2)');
+    CALL bl_cl.p_log('load_dim_customers_scd', 'SUCCESS', v_rows_ins + v_rows_upd,
+                     'Inserted: ' || v_rows_ins || ', Synced: ' || v_rows_upd || ' (SCD2 mirror of 3NF)');
 EXCEPTION WHEN OTHERS THEN
     CALL bl_cl.p_log('load_dim_customers_scd', 'ERROR', NULL, SQLERRM);
 END;
 $$;
-
