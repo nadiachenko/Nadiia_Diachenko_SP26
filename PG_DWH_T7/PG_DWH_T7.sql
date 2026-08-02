@@ -93,6 +93,11 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
+    -- Prerequisite BL_3NF object checks
+    IF to_regclass('bl_3nf.ce_categories') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_categories does not exist!';
+    END IF;
+
     -- INT
     UPDATE bl_3nf.ce_categories tgt
     SET product_category_name = src.category_name, update_dt = CURRENT_DATE
@@ -160,6 +165,11 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
+    -- Prerequisite BL_3NF object checks
+    IF to_regclass('bl_3nf.ce_countries') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_countries does not exist!';
+    END IF;
+
     -- INT
     UPDATE bl_3nf.ce_countries tgt
     SET country_name = src.country_name, update_dt = CURRENT_DATE
@@ -212,6 +222,11 @@ DECLARE
     v_tmp      INT := 0;
     rec        RECORD;
 BEGIN
+    -- Prerequisite BL_3NF object checks
+    IF to_regclass('bl_3nf.ce_channels') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_channels does not exist!';
+    END IF;
+
     FOR rec IN
         SELECT DISTINCT
             COALESCE(NULLIF(channel, ''), 'n. a.') AS channel_name,
@@ -260,6 +275,11 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
+    -- Prerequisite BL_3NF object checks
+    IF to_regclass('bl_3nf.ce_employees') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_employees does not exist!';
+    END IF;
+
     -- INT
     UPDATE bl_3nf.ce_employees tgt
     SET sales_rep_first_name = src.first_name,
@@ -340,6 +360,11 @@ DECLARE
     v_rows_exp INT := 0;
     v_tmp      INT := 0;
 BEGIN
+    -- Prerequisite BL_3NF object checks
+    IF to_regclass('bl_3nf.ce_customers_scd') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_customers_scd does not exist!';
+    END IF;
+
     -- INT 
     UPDATE bl_3nf.ce_customers_scd tgt
     SET is_active = 'N', end_dt = CURRENT_DATE - 1, update_dt = CURRENT_DATE
@@ -437,6 +462,14 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
+    -- Prerequisite BL_3NF object checks
+    IF to_regclass('bl_3nf.ce_subcategories') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_subcategories does not exist!';
+    END IF;
+    IF to_regclass('bl_3nf.ce_categories') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_categories does not exist!';
+    END IF;
+
     -- INT
     UPDATE bl_3nf.ce_subcategories tgt
     SET product_subcategory_name = src.subcategory_name,
@@ -525,6 +558,14 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
+    -- Prerequisite BL_3NF object checks
+    IF to_regclass('bl_3nf.ce_states') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_states does not exist!';
+    END IF;
+    IF to_regclass('bl_3nf.ce_countries') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_countries does not exist!';
+    END IF;
+
     -- INT
     UPDATE bl_3nf.ce_states tgt
     SET state_name = src.state_name,
@@ -610,6 +651,14 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
+    -- Prerequisite BL_3NF object checks
+    IF to_regclass('bl_3nf.ce_subchannels') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_subchannels does not exist!';
+    END IF;
+    IF to_regclass('bl_3nf.ce_channels') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_channels does not exist!';
+    END IF;
+
     -- INT
     UPDATE bl_3nf.ce_subchannels tgt
     SET subchannel = src.subchannel_name, channel_id = ch.channel_id, update_dt = CURRENT_DATE
@@ -689,6 +738,14 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
+    -- Prerequisite BL_3NF object checks
+    IF to_regclass('bl_3nf.ce_products') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_products does not exist!';
+    END IF;
+    IF to_regclass('bl_3nf.ce_subcategories') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_subcategories does not exist!';
+    END IF;
+
     -- INT
     UPDATE bl_3nf.ce_products tgt
     SET product_subcategory_id = sub.product_subcategory_id, update_dt = CURRENT_DATE
@@ -762,6 +819,14 @@ DECLARE
     v_rows_upd INT := 0;
     v_tmp      INT := 0;
 BEGIN
+    -- Prerequisite BL_3NF object checks
+    IF to_regclass('bl_3nf.ce_cities') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_cities does not exist!';
+    END IF;
+    IF to_regclass('bl_3nf.ce_states') IS NULL THEN
+        RAISE EXCEPTION 'Prerequisite table bl_3nf.ce_states does not exist!';
+    END IF;
+
     -- INT
     UPDATE bl_3nf.ce_cities tgt
     SET city_name = src.city_name,
