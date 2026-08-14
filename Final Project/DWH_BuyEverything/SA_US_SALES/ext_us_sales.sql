@@ -1,0 +1,42 @@
+CREATE FOREIGN TABLE IF NOT EXISTS sa_us_sales.ext_us_sales (
+    ORDER_ID                  VARCHAR(50),
+    CUSTOMER_ID               VARCHAR(50),
+    CUSTOMER_FIRST_NAME       VARCHAR(100),
+    CUSTOMER_LAST_NAME        VARCHAR(100),
+    CUSTOMER_EMAIL            VARCHAR(255),
+    ORDER_DT                  VARCHAR(30),
+    CUSTOMER_AGE              VARCHAR(20),
+    CUSTOMER_GENDER           VARCHAR(20),
+    STATE                     VARCHAR(100),
+    CITY                      VARCHAR(150),
+    CUSTOMER_SEGMENT          VARCHAR(50),
+    PRODUCT_ID                VARCHAR(50),
+    PRODUCT_CATEGORY          VARCHAR(100),
+    PRODUCT_SUBCATEGORY       VARCHAR(100),
+    UNIT_PRICE                VARCHAR(30),
+    QUANTITY                  VARCHAR(20),
+    DISCOUNT_PERCENT          VARCHAR(30),
+    DISCOUNT_AMOUNT           VARCHAR(30),
+    SHIPPING_COST             VARCHAR(30),
+    TAX_AMOUNT                VARCHAR(30),
+    ORDER_AMOUNT              VARCHAR(30),
+    PAYMENT_METHOD            VARCHAR(50),
+    ORDER_STATUS              VARCHAR(50),
+    RETURNED                  VARCHAR(20),
+    PROFIT_MARGIN_PERCENT     VARCHAR(30),
+    PROFIT_MARGIN_AMOUNT      VARCHAR(30),
+    SALES_REP_ID              VARCHAR(50),
+    SALES_REP_FIRST_NAME      VARCHAR(100),
+    SALES_REP_LAST_NAME       VARCHAR(100),
+    SALES_REP_EMAIL           VARCHAR(255),
+    COST_AMOUNT               VARCHAR(30),
+    CHANNEL                   VARCHAR(50),
+    SUBCHANNEL                VARCHAR(50)
+) 
+SERVER file_server
+OPTIONS ( 
+    filename 'C:/datasets/SRC_US_SALES.csv',
+    format 'csv', 
+    header 'true',
+    delimiter ','
+);
