@@ -1,0 +1,21 @@
+smoke:
+  - name: dwh_clients table exists
+    sql: SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'dwh_clients'
+    expected: 1
+  - name: dwh_products table exists
+    sql: SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'dwh_products'
+    expected: 1
+  - name: dwh_sales table exists
+    sql: SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'dwh' AND table_name = 'dwh_sales'
+    expected: 1
+
+critical:
+  - name: dwh_sales is not empty
+    sql: SELECT CASE WHEN COUNT(*) > 0 THEN 1 ELSE 0 END FROM dwh.dwh_sales
+    expected: 1
+  - name: dwh_clients has no duplicate client_id
+    sql: SELECT COUNT(*) - COUNT(DISTINCT client_id) FROM dwh.dwh_clients
+    expected: 0
+  - name: dwh_products has no NULL product_id
+    sql: SELECT COUNT(*) FROM dwh.dwh_products WHERE product_id IS NULL
+    expected: 0
