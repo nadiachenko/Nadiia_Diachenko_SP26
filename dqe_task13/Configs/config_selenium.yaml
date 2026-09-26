@@ -1,0 +1,3 @@
+global:
+    report_uri: https://playground.powerbi.com/en-us/showcases-gallery/capture-report-views
+    delay: 20
