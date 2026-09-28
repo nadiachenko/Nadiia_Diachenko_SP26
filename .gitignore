@@ -1,1 +1,9 @@
 ﻿.idea/
+   allure_smoke/
+   allure_critical/
+   allure_all/
+   allure_smoke_report/
+   allure_critical_report/
+   allure_all_report/
+   .pytest_cache/
+
